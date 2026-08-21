@@ -6,12 +6,14 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
+import java.util.Base64
 
 class GeminiService {
-    private val apiKey = "AQ.Ab8RN6Il1v9ft2mGtPazSConhXI9intHRfn_TlwS7Ghrqw6BIA" // Kendi API anahtarın
+    private val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
     private val client = HttpClient(CIO)
     private val jsonParser = Json { ignoreUnknownKeys = true }
 
+    // Metin Analizi
     suspend fun analyzeIngredients(ingredientsText: String): String {
         val prompt = """
             Sen bir dermatolog ve kozmetik kimyagerisin. Aşağıda verilen INCI içerik listesini analiz et.
@@ -34,6 +36,34 @@ class GeminiService {
             }
         """.trimIndent()
 
+        return sendToGemini(prompt)
+    }
+
+    // Görsel Analizi
+    suspend fun analyzeImage(imageBytes: ByteArray): String {
+        val base64Image = Base64.getEncoder().encodeToString(imageBytes)
+        val prompt = "Bu kozmetik ürününün üzerindeki içerik (INCI) listesini oku ve dermatolojik analizini yap. Yanıtı SADECE yukarıdaki JSON formatında ver."
+
+        val jsonPayload = """
+            {
+              "contents": [{
+                "parts": [
+                  { "text": ${objectToJsonString(prompt)} },
+                  {
+                    "inline_data": {
+                      "mime_type": "image/jpeg",
+                      "data": "$base64Image"
+                    }
+                  }
+                ]
+              }]
+            }
+        """.trimIndent()
+
+        return executeRequest(jsonPayload)
+    }
+
+    private suspend fun sendToGemini(prompt: String): String {
         val jsonPayload = """
             {
               "contents": [{
@@ -43,7 +73,10 @@ class GeminiService {
               }]
             }
         """.trimIndent()
+        return executeRequest(jsonPayload)
+    }
 
+    private suspend fun executeRequest(jsonPayload: String): String {
         val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
 
         val response: HttpResponse = client.post(url) {
@@ -52,12 +85,10 @@ class GeminiService {
         }
 
         val responseText = response.bodyAsText()
-
         if (!response.status.isSuccess()) {
             throw Exception("Gemini API Hatası (${response.status.value}): $responseText")
         }
 
-        // Gemini'nin ürettiği ham yanıtın içindeki metni (text) ayıklıyoruz
         val rootElement = jsonParser.parseToJsonElement(responseText).jsonObject
         val rawText = rootElement["candidates"]?.jsonArray?.get(0)
             ?.jsonObject?.get("content")
@@ -66,7 +97,6 @@ class GeminiService {
             ?.jsonObject?.get("text")
             ?.jsonPrimitive?.content ?: ""
 
-        // Markdown kod bloklarını temizle (eğer Gemini eklediyse)
         return rawText.replace("```json", "").replace("```", "").trim()
     }
 
