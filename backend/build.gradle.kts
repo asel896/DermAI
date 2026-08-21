@@ -29,7 +29,12 @@ dependencies {
     // Logging
     implementation("ch.qos.logback:logback-classic:$logbackVersion")
 
+    
     implementation("org.jetbrains.kotlin:kotlin-stdlib")
+
+    implementation("io.ktor:ktor-client-cio:2.3.8")
+    implementation("io.ktor:ktor-client-content-negotiation:2.3.8")
+
 
     // Test
     testImplementation("io.ktor:ktor-server-tests-jvm:$ktorVersion")

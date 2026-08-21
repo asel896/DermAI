@@ -8,8 +8,13 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.json.Json
+
 
 fun main() {
+    val geminiService = GeminiService()
+    val jsonParser = Json { ignoreUnknownKeys = true }
+
     embeddedServer(Netty, port = 8081, host = "0.0.0.0") {
         install(ContentNegotiation) {
             json()
@@ -28,27 +33,23 @@ fun main() {
             post("/api/analyze") {
                 val request = call.receive<AnalysisRequest>()
 
-                // örnek bir analiz çıktısı 
-                val response = AnalysisResponse(
-                    overallRating = "Güvenli",
-                    summary = "Girdiğiniz içerik listesi genel olarak cilt bariyerini destekleyen ve güvenli bileşenlerden oluşmaktadır.",
-                    ingredients = listOf(
-                        IngredientDetail(
-                            name = "Niacinamide",
-                            safetyScore = 1,
-                            purpose = "Cilt tonu eşitleme ve gözenek sıkılaştırma",
-                            isHarmful = false
-                        ),
-                        IngredientDetail(
-                            name = "Glycerin",
-                            safetyScore = 1,
-                            purpose = "Yoğun nemlendirme",
-                            isHarmful = false
-                        )
-                    )
-                )
 
-                call.respond(response)
+                try {
+                    // Gemini API'den yanıt al
+                    val rawGeminiResponse = geminiService.analyzeIngredients(request.ingredientsText)
+
+                    // Gemini'nin ürettiği metin yanıtı içerisindeki JSON'ı ayıkla
+                    val geminiJsonText = jsonParser.parseToJsonElement(rawGeminiResponse)
+                        .let { element ->
+                            val candidates = element.toString()
+                            rawGeminiResponse
+                        }
+
+
+                    call.respondText(rawGeminiResponse, contentType = io.ktor.http.ContentType.Application.Json)
+                } catch (e: Exception) {
+                    call.respond(mapOf("error" to "Analiz yapılırken hata oluştu: ${e.localizedMessage}"))
+                }
             }
         }
     }.start(wait = true)
