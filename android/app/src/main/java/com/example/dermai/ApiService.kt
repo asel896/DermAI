@@ -2,6 +2,7 @@ package com.example.dermai
 
 import okhttp3.MultipartBody
 import retrofit2.Response
+import retrofit2.http.*
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Multipart
@@ -15,6 +16,7 @@ interface ApiService {
 
     @POST("api/auth/login")
     suspend fun login(@Body request: AuthRequest): Response<AuthResponse>
+
 
     @POST("api/analyze")
     suspend fun analyzeText(@Body request: AnalysisRequest): Response<AnalysisResponse>

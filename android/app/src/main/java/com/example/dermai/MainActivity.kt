@@ -1,47 +1,59 @@
 package com.example.dermai
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
+import androidx.activity.viewModels
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.dermai.ui.theme.DermAITheme
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
+
+    private val viewModel: MainViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
         setContent {
-            DermAITheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+            Text(text = "DermAI Test Çalışıyor! Logcat'i kontrol et.")
+        }
+
+        lifecycleScope.launch {
+            viewModel.authState.collect { state ->
+                when (state) {
+                    is UiState.Success -> {
+                        Log.d("DermAI_TEST", "--- BAŞARILI GİRİŞ/KAYIT ---")
+                        Log.d("DermAI_TEST", "Token: ${state.data.token}")
+
+                        Log.d("DermAI_TEST", "Gemini Analizi Başlatılıyor...")
+                        viewModel.analyzeText("Water, Glycerin, Niacinamide, Salicylic Acid")
+                    }
+                    is UiState.Error -> Log.e("DermAI_TEST", "Auth Hatası: ${state.message}")
+                    is UiState.Loading -> Log.d("DermAI_TEST", "İşlem Yükleniyor...")
+                    else -> {}
                 }
             }
         }
-    }
-}
 
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
+        lifecycleScope.launch {
+            viewModel.analysisState.collect { state ->
+                when (state) {
+                    is UiState.Success -> {
+                        Log.d("DermAI_TEST", "--- GEMİNİ ANALİZ BAŞARILI ---")
+                        Log.d("DermAI_TEST", "Özet: ${state.data.summary}")
+                        Log.d("DermAI_TEST", "Genel Skor: ${state.data.overallRating}")
+                    }
+                    is UiState.Error -> Log.e("DermAI_TEST", "Analiz Hatası: ${state.message}")
+                    is UiState.Loading -> Log.d("DermAI_TEST", "Analiz Yükleniyor...")
+                    else -> {}
+                }
+            }
+        }
 
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    DermAITheme {
-        Greeting("Android")
+        val testEmail = "user_${System.currentTimeMillis()}@gmail.com"
+        Log.d("DermAI_TEST", "Yeni kayıt deneniyor: $testEmail")
+        viewModel.register(testEmail, "123456")
     }
 }
