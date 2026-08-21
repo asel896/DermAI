@@ -25,7 +25,6 @@ object HistoryTable : Table("analysis_history") {
 
 object DatabaseFactory {
     fun init() {
-
         val host = System.getenv("DB_HOST") ?: "localhost"
         val port = System.getenv("DB_PORT") ?: "5432"
         val dbName = System.getenv("DB_NAME") ?: "dermai_db"

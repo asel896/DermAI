@@ -56,7 +56,7 @@ class AuthService {
             .withIssuer(issuer)
             .withClaim("id", userId)
             .withClaim("email", email)
-            .withExpiresAt(Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000)) // 30 Gün geçerli
+            .withExpiresAt(Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000))
             .sign(Algorithm.HMAC256(jwtSecret))
     }
 }
