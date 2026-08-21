@@ -57,4 +57,23 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    // Retrofit & OkHttp (Network)
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+
+    // DataStore (JWT Token & Kullanıcı Oturumu Saklama)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
+
+    // Coil (Görsel İşleme)
+    implementation("io.coil-kt:coil-compose:2.6.0")
+
+    // Navigation Compose (Sayfalar Arası Geçiş)
+    implementation("androidx.navigation:navigation-compose:2.8.0")
+
+    // ViewModel & Lifecycle
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
+
 }
