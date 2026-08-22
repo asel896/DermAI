@@ -66,7 +66,7 @@ fun HomeScreen(viewModel: MainViewModel) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            
+
             when (val state = analysisState) {
                 is UiState.Loading -> {
                     Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp), contentAlignment = Alignment.Center) {

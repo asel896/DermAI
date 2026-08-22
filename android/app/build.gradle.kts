@@ -40,6 +40,7 @@ android {
 }
 
 dependencies {
+    implementation("androidx.navigation:navigation-compose:2.8.0")
     // Retrofit & Gson
     implementation("com.squareup.retrofit2:retrofit:2.9.0")
     implementation("com.squareup.retrofit2:converter-gson:2.9.0")
