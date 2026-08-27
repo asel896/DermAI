@@ -1,5 +1,6 @@
 package com.example.dermai
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,6 +33,7 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
 @Composable
 fun MainScreen(viewModel: MainViewModel) {
     val navController = rememberNavController()
+    val snackbarHostState = remember { SnackbarHostState() }
     val items = listOf(
         BottomNavItem.Home,
         BottomNavItem.History,
@@ -39,6 +41,7 @@ fun MainScreen(viewModel: MainViewModel) {
     )
 
     Scaffold(
+        snackbarHost = { SnackbarHost(hostState = snackbarHostState) },
         bottomBar = {
             NavigationBar {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -72,7 +75,7 @@ fun MainScreen(viewModel: MainViewModel) {
                 HomeScreen(viewModel = viewModel)
             }
             composable(BottomNavItem.History.route) {
-                HistoryScreen(viewModel = viewModel)
+                HistoryScreen(viewModel = viewModel, snackbarHostState = snackbarHostState)
             }
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen()
@@ -82,11 +85,22 @@ fun MainScreen(viewModel: MainViewModel) {
 }
 
 @Composable
-fun HistoryScreen(viewModel: MainViewModel) {
+fun HistoryScreen(viewModel: MainViewModel, snackbarHostState: SnackbarHostState) {
     val historyState by viewModel.historyState.collectAsState()
 
     LaunchedEffect(Unit) {
         viewModel.fetchHistory()
+    }
+
+    // snackbar
+    LaunchedEffect(historyState) {
+        if (historyState is UiState.Error) {
+            val message = (historyState as UiState.Error).message
+            snackbarHostState.showSnackbar(
+                message = "Hata: $message",
+                duration = SnackbarDuration.Short
+            )
+        }
     }
 
     Column(
@@ -105,12 +119,11 @@ fun HistoryScreen(viewModel: MainViewModel) {
         when (val state = historyState) {
             is UiState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            }
-            is UiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(text = "Hata: ${state.message}", color = MaterialTheme.colorScheme.error)
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Analiz geçmişi yükleniyor...", style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
             is UiState.Success -> {
@@ -129,13 +142,21 @@ fun HistoryScreen(viewModel: MainViewModel) {
                     }
                 }
             }
-            is UiState.Idle -> {}
+            else -> {}
         }
     }
 }
 
+
 @Composable
 fun HistoryItemCard(item: HistoryResponseItem) {
+
+    val (riskLabel, riskColor) = when {
+        item.resultJson.contains("Yüksek Risk", ignoreCase = true) || item.resultJson.contains("Tehlikeli", ignoreCase = true) -> "Yüksek Risk" to Color(0xFFE53935)
+        item.resultJson.contains("Orta Risk", ignoreCase = true) || item.resultJson.contains("Dikkat", ignoreCase = true) -> "Orta Risk" to Color(0xFFFB8C00)
+        else -> "Güvenli" to Color(0xFF43A047)
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -143,23 +164,50 @@ fun HistoryItemCard(item: HistoryResponseItem) {
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = item.createdAt,
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
+
+                // risk etiketi
+                Box(
+                    modifier = Modifier
+                        .background(color = riskColor.copy(alpha = 0.15f), shape = RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = riskLabel,
+                        color = riskColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = item.ingredientsText,
                 fontWeight = FontWeight.Bold,
                 fontSize = 15.sp,
                 maxLines = 2
             )
-            Spacer(modifier = Modifier.height(6.dp))
-            Text(
-                text = item.createdAt,
-                fontSize = 12.sp,
-                color = Color.Gray
-            )
+
             Spacer(modifier = Modifier.height(8.dp))
+            Divider(color = Color.LightGray.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(8.dp))
+
             Text(
                 text = item.resultJson,
                 fontSize = 13.sp,
-                maxLines = 3
+                maxLines = 3,
+                style = MaterialTheme.typography.bodyMedium
             )
         }
     }
@@ -167,5 +215,7 @@ fun HistoryItemCard(item: HistoryResponseItem) {
 
 @Composable
 fun ProfileScreen() {
-    Text("Profil Ayarları Yakında...", modifier = Modifier.padding(16.dp))
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Text("Profil Ayarları Yakında...", modifier = Modifier.padding(16.dp))
+    }
 }
