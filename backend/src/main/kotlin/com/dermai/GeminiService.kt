@@ -6,14 +6,37 @@ import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import kotlinx.serialization.json.*
+import java.io.File
+import java.io.FileInputStream
 import java.util.Base64
+import java.util.Properties
+import io.ktor.client.plugins.HttpTimeout
 
 class GeminiService {
-    private val apiKey = System.getenv("GEMINI_API_KEY") ?: ""
-    private val client = HttpClient(CIO)
+    private val apiKey: String = loadApiKey()
+    private val client = HttpClient(CIO){
+    install(HttpTimeout) {
+        requestTimeoutMillis = 60000 // İsteğin tamamlanması için 60 saniye ver
+        connectTimeoutMillis = 15000 // Bağlantı için 15 saniye ver
+        socketTimeoutMillis = 60000  // Veri akışı için 60 saniye ver
+    }
+}
     private val jsonParser = Json { ignoreUnknownKeys = true }
 
-    // Metin Analizi
+    private fun loadApiKey(): String {
+        
+        val localPropertiesFile = File("local.properties")
+        if (localPropertiesFile.exists()) {
+            val properties = Properties()
+            properties.load(FileInputStream(localPropertiesFile))
+            val key = properties.getProperty("GEMINI_API_KEY")
+            if (!key.isNullOrBlank()) return key
+        }
+      
+        return System.getenv("GEMINI_API_KEY") ?: ""
+    }
+
+    // metin analizi
     suspend fun analyzeIngredients(ingredientsText: String): String {
         val prompt = """
             Sen bir dermatolog ve kozmetik kimyagerisin. Aşağıda verilen INCI içerik listesini analiz et.
@@ -39,7 +62,7 @@ class GeminiService {
         return sendToGemini(prompt)
     }
 
-    // Görsel Analizi
+    // görsel analizi
     suspend fun analyzeImage(imageBytes: ByteArray): String {
         val base64Image = Base64.getEncoder().encodeToString(imageBytes)
         val prompt = "Bu kozmetik ürününün üzerindeki içerik (INCI) listesini oku ve dermatolojik analizini yap. Yanıtı SADECE yukarıdaki JSON formatında ver."
@@ -77,6 +100,10 @@ class GeminiService {
     }
 
     private suspend fun executeRequest(jsonPayload: String): String {
+        if (apiKey.isBlank()) {
+            throw Exception("GEMINI_API_KEY tanımlanmamış! Lütfen local.properties dosyasını kontrol edin.")
+        }
+
         val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
 
         val response: HttpResponse = client.post(url) {

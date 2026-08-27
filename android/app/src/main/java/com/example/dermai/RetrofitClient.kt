@@ -4,6 +4,7 @@ import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.concurrent.TimeUnit
 
 object RetrofitClient {
 
@@ -25,6 +26,9 @@ object RetrofitClient {
 
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
+        .connectTimeout(30, TimeUnit.SECONDS) // bağlantı zaman aşımı
+        .readTimeout(60, TimeUnit.SECONDS)    // gemini yanıt bekleme zaman aşımı
+        .writeTimeout(30, TimeUnit.SECONDS)   // veri gönderme zaman aşımı
         .build()
 
     val apiService: ApiService by lazy {
