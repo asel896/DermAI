@@ -15,70 +15,66 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 
 @Composable
 fun AuthScreen(onAuthSuccess: () -> Unit) {
     val context = LocalContext.current
-
+    val coroutineScope = rememberCoroutineScope()
     val sharedPreferences = remember {
         context.getSharedPreferences("DermAI_User_Prefs", Context.MODE_PRIVATE)
     }
 
     var isSignUp by remember { mutableStateOf(false) }
-
-
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var name by remember { mutableStateOf("") }
-
-
+    var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    fun validateAndSubmit() {
+    fun handleAuth() {
         errorMessage = null
         val cleanEmail = email.trim()
         val cleanPassword = password.trim()
-        val cleanName = name.trim()
 
-        if (cleanEmail.isEmpty() || cleanPassword.isEmpty() || (isSignUp && cleanName.isEmpty())) {
-            errorMessage = "Lütfen tüm alanları doldurun."
+        if (cleanEmail.isEmpty() || cleanPassword.isEmpty()) {
+            errorMessage = "Lütfen e-posta ve şifrenizi girin."
             return
         }
 
-        if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
-            errorMessage = "Lütfen geçerli bir e-posta adresi girin."
-            return
-        }
+        isLoading = true
+        coroutineScope.launch {
+            try {
 
-        if (cleanPassword.length < 6) {
-            errorMessage = "Şifreniz en az 6 karakter olmalıdır."
-            return
-        }
+                val response = if (isSignUp) {
+                    RetrofitClient.apiService.register(AuthRequest(cleanEmail, cleanPassword))
+                } else {
+                    RetrofitClient.apiService.login(AuthRequest(cleanEmail, cleanPassword))
+                }
 
-        if (isSignUp) {
-
-            sharedPreferences.edit().apply {
-                putString("user_email", cleanEmail)
-                putString("user_password", cleanPassword)
-                putString("user_name", cleanName)
-                apply()
-            }
-            errorMessage = null
-            onAuthSuccess()
-        } else {
-
-            val savedEmail = sharedPreferences.getString("user_email", null)
-            val savedPassword = sharedPreferences.getString("user_password", null)
+                if (response.isSuccessful && response.body() != null) {
+                    val authData = response.body()!!
+                    val token = authData.token
 
 
-            val validEmail = savedEmail ?: "test@dermai.com"
-            val validPassword = savedPassword ?: "123456"
+                    RetrofitClient.userToken = token
 
-            if (cleanEmail.equals(validEmail, ignoreCase = true) && cleanPassword == validPassword) {
-                errorMessage = null
-                onAuthSuccess()
-            } else {
-                errorMessage = "E-posta veya şifre hatalı! Lütfen önce Kaydolun."
+
+                    sharedPreferences.edit().apply {
+                        putString("jwt_token", token)
+                        putString("user_email", cleanEmail)
+                        apply()
+                    }
+
+                    isLoading = false
+                    onAuthSuccess()
+                } else {
+                    isLoading = false
+                    errorMessage = if (isSignUp) "Kayıt oluşturulamadı." else "E-posta veya şifre hatalı!"
+                }
+            } catch (e: Exception) {
+                isLoading = false
+                errorMessage = "Sunucuya bağlanılamadı: ${e.localizedMessage}"
             }
         }
     }
@@ -118,7 +114,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
                     ) {
                         Icon(
                             imageVector = Icons.Default.ErrorOutline,
-                            contentDescription = "Hata",
+                            contentDescription = null,
                             tint = MaterialTheme.colorScheme.error
                         )
                         Spacer(modifier = Modifier.width(8.dp))
@@ -135,7 +131,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
         if (isSignUp) {
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it; errorMessage = null },
+                onValueChange = { name = it },
                 label = { Text("Ad Soyad") },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
@@ -145,7 +141,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
 
         OutlinedTextField(
             value = email,
-            onValueChange = { email = it; errorMessage = null },
+            onValueChange = { email = it },
             label = { Text("E-posta") },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -155,7 +151,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
 
         OutlinedTextField(
             value = password,
-            onValueChange = { password = it; errorMessage = null },
+            onValueChange = { password = it },
             label = { Text("Şifre") },
             visualTransformation = PasswordVisualTransformation(),
             modifier = Modifier.fillMaxWidth(),
@@ -165,13 +161,21 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Button(
-            onClick = { validateAndSubmit() },
+            onClick = { handleAuth() },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(50.dp),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            enabled = !isLoading
         ) {
-            Text(if (isSignUp) "Kaydol" else "Giriş Yap", fontSize = 16.sp)
+            if (isLoading) {
+                CircularProgressIndicator(
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(24.dp)
+                )
+            } else {
+                Text(if (isSignUp) "Kaydol" else "Giriş Yap", fontSize = 16.sp)
+            }
         }
 
         TextButton(

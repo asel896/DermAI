@@ -1,5 +1,6 @@
 package com.example.dermai
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,21 +18,45 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+
+        val sharedPreferences = getSharedPreferences("DermAI_User_Prefs", Context.MODE_PRIVATE)
+        val savedToken = sharedPreferences.getString("jwt_token", null)
+
+
+        if (!savedToken.isNullOrEmpty()) {
+            RetrofitClient.userToken = savedToken
+        }
+
         setContent {
             MaterialTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    var isAuthenticated by remember { mutableStateOf(false) }
+
+                    var isAuthenticated by remember { mutableStateOf(!savedToken.isNullOrEmpty()) }
 
                     if (!isAuthenticated) {
-                        AuthScreen(onAuthSuccess = { isAuthenticated = true })
+                        AuthScreen(
+                            onAuthSuccess = {
+                                isAuthenticated = true
+                            }
+                        )
                     } else {
                         MainScreen(
                             mainViewModel = mainViewModel,
                             profileViewModel = profileViewModel,
-                            onLogout = { isAuthenticated = false }
+                            onLogout = {
+
+                                sharedPreferences.edit().apply {
+                                    remove("jwt_token")
+                                    remove("user_email")
+                                    apply()
+                                }
+                                RetrofitClient.userToken = null
+                                isAuthenticated = false
+                            }
                         )
                     }
                 }

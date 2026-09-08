@@ -1,87 +1,50 @@
 package com.example.dermai
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class MainViewModel(application: Application) : AndroidViewModel(application) {
+sealed interface UiState<out T> {
+    object Idle : UiState<Nothing>
+    object Loading : UiState<Nothing>
+    data class Success<T>(val data: T) : UiState<T>
+    data class Error(val message: String) : UiState<Nothing>
+}
 
-    val tokenManager = TokenManager(application)
-
-    private val _authState = MutableStateFlow<UiState<AuthResponse>>(UiState.Idle)
-    val authState: StateFlow<UiState<AuthResponse>> = _authState
+class MainViewModel : ViewModel() {
 
     private val _analysisState = MutableStateFlow<UiState<AnalysisResponse>>(UiState.Idle)
-    val analysisState: StateFlow<UiState<AnalysisResponse>> = _analysisState
+    val analysisState: StateFlow<UiState<AnalysisResponse>> = _analysisState.asStateFlow()
 
     private val _historyState = MutableStateFlow<UiState<List<HistoryResponseItem>>>(UiState.Idle)
-    val historyState: StateFlow<UiState<List<HistoryResponseItem>>> = _historyState
+    val historyState: StateFlow<UiState<List<HistoryResponseItem>>> = _historyState.asStateFlow()
 
-    init {
-        viewModelScope.launch {
-            tokenManager.getToken.collect { token ->
-                RetrofitClient.userToken = token
-            }
+    fun analyzeText(ingredientsText: String) {
+        if (ingredientsText.isBlank()) {
+            _analysisState.value = UiState.Error("Lütfen analiz edilecek içerik metnini girin.")
+            return
         }
-    }
 
-    fun login(email: String, pass: String) {
-        viewModelScope.launch {
-            _authState.value = UiState.Loading
-            try {
-                val response = RetrofitClient.apiService.login(AuthRequest(email, pass))
-                if (response.isSuccessful && response.body() != null) {
-                    val authData = response.body()!!
-                    tokenManager.saveToken(authData.token)
-                    _authState.value = UiState.Success(authData)
-                } else {
-                    val err = response.errorBody()?.string() ?: "Giriş başarısız."
-                    _authState.value = UiState.Error("HTTP ${response.code()}: $err")
-                }
-            } catch (e: Exception) {
-                _authState.value = UiState.Error(e.localizedMessage ?: "Bağlantı hatası")
-            }
-        }
-    }
-
-    fun register(email: String, pass: String) {
-        viewModelScope.launch {
-            _authState.value = UiState.Loading
-            try {
-                val response = RetrofitClient.apiService.register(AuthRequest(email, pass))
-                if (response.isSuccessful && response.body() != null) {
-                    val authData = response.body()!!
-                    tokenManager.saveToken(authData.token)
-                    _authState.value = UiState.Success(authData)
-                } else {
-                    val err = response.errorBody()?.string() ?: "Kayıt başarısız."
-                    _authState.value = UiState.Error("HTTP ${response.code()}: $err")
-                }
-            } catch (e: Exception) {
-                _authState.value = UiState.Error(e.localizedMessage ?: "Bağlantı hatası")
-            }
-        }
-    }
-
-    fun analyzeText(text: String) {
         viewModelScope.launch {
             _analysisState.value = UiState.Loading
             try {
-                val response = RetrofitClient.apiService.analyzeText(AnalysisRequest(text))
+                val response = RetrofitClient.apiService.analyzeText(
+                    AnalysisRequest(ingredientsText = ingredientsText)
+                )
+
                 if (response.isSuccessful && response.body() != null) {
                     _analysisState.value = UiState.Success(response.body()!!)
                 } else {
-                    val err = response.errorBody()?.string() ?: "Analiz hatası."
-                    _analysisState.value = UiState.Error("HTTP ${response.code()}: $err")
+                    _analysisState.value = UiState.Error("Analiz başarısız: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _analysisState.value = UiState.Error(e.localizedMessage ?: "Bağlantı hatası")
+                _analysisState.value = UiState.Error(e.localizedMessage ?: "Sunucu hatası oluştu.")
             }
         }
     }
@@ -91,16 +54,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _analysisState.value = UiState.Loading
             try {
                 val requestFile = imageBytes.toRequestBody("image/jpeg".toMediaTypeOrNull())
-                val body = MultipartBody.Part.createFormData("image", "ingredient.jpg", requestFile)
+                val multipartBody = MultipartBody.Part.createFormData("image", "analysis_image.jpg", requestFile)
 
-                val response = RetrofitClient.apiService.analyzeImage(body)
+                val response = RetrofitClient.apiService.analyzeImage(multipartBody)
+
                 if (response.isSuccessful && response.body() != null) {
                     _analysisState.value = UiState.Success(response.body()!!)
                 } else {
-                    _analysisState.value = UiState.Error("Görsel analizi başarısız.")
+                    _analysisState.value = UiState.Error("Görsel analizi başarısız: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _analysisState.value = UiState.Error(e.localizedMessage ?: "Bağlantı hatası")
+                _analysisState.value = UiState.Error(e.localizedMessage ?: "Bağlantı hatası oluştu.")
             }
         }
     }
@@ -110,21 +74,19 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             _historyState.value = UiState.Loading
             try {
                 val response = RetrofitClient.apiService.getHistory()
+
                 if (response.isSuccessful && response.body() != null) {
                     _historyState.value = UiState.Success(response.body()!!)
                 } else {
-                    _historyState.value = UiState.Error("Geçmiş verisi alınamadı.")
+                    _historyState.value = UiState.Error("Geçmiş verileri alınamadı: ${response.code()}")
                 }
             } catch (e: Exception) {
-                _historyState.value = UiState.Error(e.localizedMessage ?: "Bağlantı hatası")
+                _historyState.value = UiState.Error(e.localizedMessage ?: "Ağ hatası oluştu.")
             }
         }
     }
 
-    fun logout() {
-        viewModelScope.launch {
-            tokenManager.clearToken()
-            _authState.value = UiState.Idle
-        }
+    fun resetAnalysisState() {
+        _analysisState.value = UiState.Idle
     }
 }
