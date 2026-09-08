@@ -40,6 +40,19 @@ android {
 }
 
 dependencies {
+
+    implementation("androidx.compose.material:material-icons-extended")
+
+    // CameraX
+    val cameraxVersion = "1.3.1"
+    implementation("androidx.camera:camera-core:$cameraxVersion")
+    implementation("androidx.camera:camera-camera2:$cameraxVersion")
+    implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
+    implementation("androidx.camera:camera-view:$cameraxVersion")
+
+    // Google ML Kit Metin Tanıma
+    implementation("com.google.android.gms:play-services-mlkit-text-recognition:19.0.0")
+
     implementation("androidx.navigation:navigation-compose:2.8.0")
     // Retrofit & Gson
     implementation("com.squareup.retrofit2:retrofit:2.9.0")

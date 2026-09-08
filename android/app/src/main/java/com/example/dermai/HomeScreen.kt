@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,78 +19,110 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun HomeScreen(viewModel: MainViewModel) {
     var textInput by remember { mutableStateOf("") }
+    var showCamera by remember { mutableStateOf(false) }
     val analysisState by viewModel.analysisState.collectAsState()
 
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize()
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp)
-        ) {
-            Text(
-                text = "DermAI Analiz",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-
-
-            OutlinedTextField(
-                value = textInput,
-                onValueChange = { textInput = it },
-                label = { Text("Kozmetik İçerik Listesi (INCI)...") },
-                placeholder = { Text("Örn: Aqua, Glycerin, Niacinamide...") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(120.dp),
-                maxLines = 5
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-
-            Button(
-                onClick = {
-                    if (textInput.isNotBlank()) {
-                        viewModel.analyzeText(textInput)
-                    }
-                },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp)
-            ) {
-                Text("İçeriği Analiz Et")
+    if (showCamera) {
+        CameraScreen(
+            onTextRecognized = { recognizedText ->
+                textInput = recognizedText
+                showCamera = false
+            },
+            onClose = {
+                showCamera = false
             }
+        )
+    } else {
+        Scaffold(
+            modifier = Modifier.fillMaxSize()
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Text(
+                    text = "DermAI Analiz",
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
 
-            Spacer(modifier = Modifier.height(16.dp))
 
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = textInput,
+                        onValueChange = { textInput = it },
+                        label = { Text("Kozmetik İçerik Listesi (INCI)...") },
+                        placeholder = { Text("Örn: Aqua, Glycerin, Niacinamide...") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(130.dp),
+                        maxLines = 5
+                    )
 
-            when (val state = analysisState) {
-                is UiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxWidth().padding(top = 20.dp), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
+                    // Metin kutusunun sağ alt tarafına eklenen Kamera İkonu
+                    IconButton(
+                        onClick = { showCamera = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = "Kamera ile Tara",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 }
-                is UiState.Error -> {
-                    Text(
-                        text = "Hata: ${state.message}",
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(8.dp)
-                    )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Button(
+                    onClick = {
+                        if (textInput.isNotBlank()) {
+                            viewModel.analyzeText(textInput)
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text("İçeriği Analiz Et")
                 }
-                is UiState.Success -> {
-                    AnalysisResultView(response = state.data)
-                }
-                is UiState.Idle -> {
-                    Text(
-                        text = "Analiz yapmak için yukarıya içerik listenizi yapıştırın.",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                when (val state = analysisState) {
+                    is UiState.Loading -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator()
+                        }
+                    }
+                    is UiState.Error -> {
+                        Text(
+                            text = "Hata: ${state.message}",
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(8.dp)
+                        )
+                    }
+                    is UiState.Success -> {
+                        AnalysisResultView(response = state.data)
+                    }
+                    is UiState.Idle -> {
+                        Text(
+                            text = "Analiz yapmak için yukarıya içerik listenizi yapıştırın veya kamera ikonuyla taratın.",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             }
         }
