@@ -1,5 +1,6 @@
 package com.example.dermai
 
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -16,6 +18,12 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun AuthScreen(onAuthSuccess: () -> Unit) {
+    val context = LocalContext.current
+
+    val sharedPreferences = remember {
+        context.getSharedPreferences("DermAI_User_Prefs", Context.MODE_PRIVATE)
+    }
+
     var isSignUp by remember { mutableStateOf(false) }
 
 
@@ -26,16 +34,11 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-
-    var registeredEmail by remember { mutableStateOf("test@dermai.com") }
-    var registeredPassword by remember { mutableStateOf("123456") }
-
     fun validateAndSubmit() {
         errorMessage = null
         val cleanEmail = email.trim()
         val cleanPassword = password.trim()
         val cleanName = name.trim()
-
 
         if (cleanEmail.isEmpty() || cleanPassword.isEmpty() || (isSignUp && cleanName.isEmpty())) {
             errorMessage = "Lütfen tüm alanları doldurun."
@@ -43,7 +46,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
         }
 
         if (!android.util.Patterns.EMAIL_ADDRESS.matcher(cleanEmail).matches()) {
-            errorMessage = "Lütfen geçerli bir e-posta adresi girin (örn: isim@domain.com)."
+            errorMessage = "Lütfen geçerli bir e-posta adresi girin."
             return
         }
 
@@ -52,20 +55,30 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
             return
         }
 
-
         if (isSignUp) {
 
-            registeredEmail = cleanEmail
-            registeredPassword = cleanPassword
+            sharedPreferences.edit().apply {
+                putString("user_email", cleanEmail)
+                putString("user_password", cleanPassword)
+                putString("user_name", cleanName)
+                apply()
+            }
             errorMessage = null
             onAuthSuccess()
         } else {
 
-            if (cleanEmail.equals(registeredEmail, ignoreCase = true) && cleanPassword == registeredPassword) {
+            val savedEmail = sharedPreferences.getString("user_email", null)
+            val savedPassword = sharedPreferences.getString("user_password", null)
+
+
+            val validEmail = savedEmail ?: "test@dermai.com"
+            val validPassword = savedPassword ?: "123456"
+
+            if (cleanEmail.equals(validEmail, ignoreCase = true) && cleanPassword == validPassword) {
                 errorMessage = null
                 onAuthSuccess()
             } else {
-                errorMessage = "E-posta veya şifre hatalı! (Henüz kaydolmadıysanız lütfen önce Kaydolun)"
+                errorMessage = "E-posta veya şifre hatalı! Lütfen önce Kaydolun."
             }
         }
     }
@@ -90,7 +103,6 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
         )
 
         Spacer(modifier = Modifier.height(28.dp))
-
 
         AnimatedVisibility(visible = errorMessage != null) {
             errorMessage?.let { msg ->
