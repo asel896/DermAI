@@ -31,7 +31,11 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
 }
 
 @Composable
-fun MainScreen(viewModel: MainViewModel) {
+fun MainScreen(
+    mainViewModel: MainViewModel,
+    profileViewModel: ProfileViewModel,
+    onLogout: () -> Unit
+) {
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val items = listOf(
@@ -72,13 +76,15 @@ fun MainScreen(viewModel: MainViewModel) {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(BottomNavItem.Home.route) {
-                HomeScreen(viewModel = viewModel)
+                HomeScreen(viewModel = mainViewModel)
             }
             composable(BottomNavItem.History.route) {
-                HistoryScreen(viewModel = viewModel, snackbarHostState = snackbarHostState)
+                HistoryScreen(viewModel = mainViewModel, snackbarHostState = snackbarHostState)
             }
             composable(BottomNavItem.Profile.route) {
-                ProfileScreen()
+                ProfileScreen(
+                    profileViewModel = profileViewModel,
+                    onLogout = onLogout )
             }
         }
     }
@@ -92,7 +98,6 @@ fun HistoryScreen(viewModel: MainViewModel, snackbarHostState: SnackbarHostState
         viewModel.fetchHistory()
     }
 
-    // snackbar
     LaunchedEffect(historyState) {
         if (historyState is UiState.Error) {
             val message = (historyState as UiState.Error).message
@@ -147,10 +152,8 @@ fun HistoryScreen(viewModel: MainViewModel, snackbarHostState: SnackbarHostState
     }
 }
 
-
 @Composable
 fun HistoryItemCard(item: HistoryResponseItem) {
-
     val (riskLabel, riskColor) = when {
         item.resultJson.contains("Yüksek Risk", ignoreCase = true) || item.resultJson.contains("Tehlikeli", ignoreCase = true) -> "Yüksek Risk" to Color(0xFFE53935)
         item.resultJson.contains("Orta Risk", ignoreCase = true) || item.resultJson.contains("Dikkat", ignoreCase = true) -> "Orta Risk" to Color(0xFFFB8C00)
@@ -175,7 +178,6 @@ fun HistoryItemCard(item: HistoryResponseItem) {
                     color = Color.Gray
                 )
 
-                // risk etiketi
                 Box(
                     modifier = Modifier
                         .background(color = riskColor.copy(alpha = 0.15f), shape = RoundedCornerShape(8.dp))
@@ -200,7 +202,7 @@ fun HistoryItemCard(item: HistoryResponseItem) {
             )
 
             Spacer(modifier = Modifier.height(8.dp))
-            Divider(color = Color.LightGray.copy(alpha = 0.5f))
+            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.5f))
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
@@ -210,12 +212,5 @@ fun HistoryItemCard(item: HistoryResponseItem) {
                 style = MaterialTheme.typography.bodyMedium
             )
         }
-    }
-}
-
-@Composable
-fun ProfileScreen() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text("Profil Ayarları Yakında...", modifier = Modifier.padding(16.dp))
     }
 }
