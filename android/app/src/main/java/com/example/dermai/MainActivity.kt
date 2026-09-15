@@ -32,6 +32,11 @@ fun AppNavigation(mainViewModel: MainViewModel) {
 
     val tokenState by tokenManager.getToken.collectAsState(initial = null)
 
+
+    LaunchedEffect(tokenState) {
+        RetrofitClient.userToken = tokenState
+    }
+
     val profileViewModel: ProfileViewModel = viewModel(
         factory = ProfileViewModel.Factory(tokenManager, context)
     )
@@ -48,6 +53,7 @@ fun AppNavigation(mainViewModel: MainViewModel) {
                 mainViewModel = mainViewModel,
                 onLogout = {
                     coroutineScope.launch {
+                        RetrofitClient.userToken = null
                         tokenManager.clearToken()
                     }
                 }

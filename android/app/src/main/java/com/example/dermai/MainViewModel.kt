@@ -40,8 +40,10 @@ class MainViewModel : ViewModel() {
 
                 if (response.isSuccessful && response.body() != null) {
                     _analysisState.value = UiState.Success(response.body()!!)
+
+                    fetchHistory()
                 } else {
-                    _analysisState.value = UiState.Error("Analiz başarısız: ${response.code()}")
+                    _analysisState.value = UiState.Error("Analiz başarısız (${response.code()}): ${response.errorBody()?.string()}")
                 }
             } catch (e: Exception) {
                 _analysisState.value = UiState.Error(e.localizedMessage ?: "Sunucu hatası oluştu.")
@@ -60,6 +62,7 @@ class MainViewModel : ViewModel() {
 
                 if (response.isSuccessful && response.body() != null) {
                     _analysisState.value = UiState.Success(response.body()!!)
+                    fetchHistory()
                 } else {
                     _analysisState.value = UiState.Error("Görsel analizi başarısız: ${response.code()}")
                 }
