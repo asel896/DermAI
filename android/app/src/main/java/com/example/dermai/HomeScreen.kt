@@ -64,7 +64,7 @@ fun HomeScreen(viewModel: MainViewModel) {
                         maxLines = 5
                     )
 
-                    // Metin kutusunun sağ alt tarafına eklenen Kamera İkonu
+
                     IconButton(
                         onClick = { showCamera = true },
                         modifier = Modifier

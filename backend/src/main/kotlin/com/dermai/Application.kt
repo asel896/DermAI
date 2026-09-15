@@ -32,6 +32,16 @@ fun main() {
         install(ContentNegotiation) {
             json()
         }
+        
+        install(CORS) {
+            anyHost()
+            allowHeader(HttpHeaders.ContentType)
+            allowHeader(HttpHeaders.Authorization)
+            allowMethod(HttpMethod.Options)
+            allowMethod(HttpMethod.Put)
+            allowMethod(HttpMethod.Patch)
+            allowMethod(HttpMethod.Delete)
+        }
 
         install(Authentication) {
             jwt("auth-jwt") {

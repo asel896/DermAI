@@ -2,6 +2,7 @@ package com.example.dermai
 
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
@@ -24,11 +25,17 @@ object RetrofitClient {
         chain.proceed(newRequest)
     }
 
+
+    private val loggingInterceptor = HttpLoggingInterceptor().apply {
+        level = HttpLoggingInterceptor.Level.BODY
+    }
+
     private val okHttpClient = OkHttpClient.Builder()
         .addInterceptor(authInterceptor)
-        .connectTimeout(30, TimeUnit.SECONDS) // bağlantı zaman aşımı
-        .readTimeout(60, TimeUnit.SECONDS)    // gemini yanıt bekleme zaman aşımı
-        .writeTimeout(30, TimeUnit.SECONDS)   // veri gönderme zaman aşımı
+        .addInterceptor(loggingInterceptor)
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
     val apiService: ApiService by lazy {

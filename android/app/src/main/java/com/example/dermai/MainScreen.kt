@@ -15,9 +15,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -33,9 +35,14 @@ sealed class BottomNavItem(val route: String, val title: String, val icon: Image
 @Composable
 fun MainScreen(
     mainViewModel: MainViewModel,
-    profileViewModel: ProfileViewModel,
     onLogout: () -> Unit
 ) {
+    val context = LocalContext.current
+    val tokenManager = remember { TokenManager(context) }
+    val profileViewModel: ProfileViewModel = viewModel(
+        factory = ProfileViewModel.Factory(tokenManager, context)
+    )
+
     val navController = rememberNavController()
     val snackbarHostState = remember { SnackbarHostState() }
     val items = listOf(
@@ -84,7 +91,8 @@ fun MainScreen(
             composable(BottomNavItem.Profile.route) {
                 ProfileScreen(
                     profileViewModel = profileViewModel,
-                    onLogout = onLogout )
+                    onLogout = onLogout
+                )
             }
         }
     }

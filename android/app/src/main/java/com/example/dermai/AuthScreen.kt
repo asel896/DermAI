@@ -1,6 +1,7 @@
 package com.example.dermai
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -21,9 +22,7 @@ import kotlinx.coroutines.launch
 fun AuthScreen(onAuthSuccess: () -> Unit) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val sharedPreferences = remember {
-        context.getSharedPreferences("DermAI_User_Prefs", Context.MODE_PRIVATE)
-    }
+    val tokenManager = remember { TokenManager(context) }
 
     var isSignUp by remember { mutableStateOf(false) }
     var email by remember { mutableStateOf("") }
@@ -33,6 +32,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     fun handleAuth() {
+        Log.d("DERMAI_TEST", "1. Butona tıklandı! Email: $email | isSignUp: $isSignUp")
         errorMessage = null
         val cleanEmail = email.trim()
         val cleanPassword = password.trim()
@@ -45,6 +45,7 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
         isLoading = true
         coroutineScope.launch {
             try {
+                Log.d("DERMAI_TEST", "2. Ağ isteği atılıyor...")
 
                 val response = if (isSignUp) {
                     RetrofitClient.apiService.register(AuthRequest(cleanEmail, cleanPassword))
@@ -52,28 +53,41 @@ fun AuthScreen(onAuthSuccess: () -> Unit) {
                     RetrofitClient.apiService.login(AuthRequest(cleanEmail, cleanPassword))
                 }
 
+                Log.d("DERMAI_TEST", "3. Sunucu yanıt kodu: ${response.code()}")
+
                 if (response.isSuccessful && response.body() != null) {
                     val authData = response.body()!!
                     val token = authData.token
 
-
                     RetrofitClient.userToken = token
+                    tokenManager.saveToken(token)
 
 
-                    sharedPreferences.edit().apply {
-                        putString("jwt_token", token)
-                        putString("user_email", cleanEmail)
-                        apply()
+                    val sharedPreferences = context.getSharedPreferences("DermAI_User_Prefs", Context.MODE_PRIVATE)
+                    if (isSignUp && name.isNotBlank()) {
+                        sharedPreferences.edit().putString("user_display_name", name.trim()).apply()
                     }
 
                     isLoading = false
                     onAuthSuccess()
+
+                    if (isSignUp && name.isNotBlank()) {
+                        val sharedPref = context.getSharedPreferences("DermAI_User_Prefs", Context.MODE_PRIVATE)
+                        sharedPref.edit().putString("user_display_name", name.trim()).apply()
+                    }
+
+                    Log.d("DERMAI_TEST", "4. Token başarıyla kaydedildi, ana ekrana geçiliyor.")
+                    isLoading = false
+                    onAuthSuccess()
                 } else {
                     isLoading = false
+                    val errorBody = response.errorBody()?.string()
+                    Log.e("DERMAI_TEST", "Sunucu Hata Gövdesi: $errorBody")
                     errorMessage = if (isSignUp) "Kayıt oluşturulamadı." else "E-posta veya şifre hatalı!"
                 }
             } catch (e: Exception) {
                 isLoading = false
+                Log.e("DERMAI_TEST", "CATCH / BAĞLANTI HATASI: ${e.localizedMessage}", e)
                 errorMessage = "Sunucuya bağlanılamadı: ${e.localizedMessage}"
             }
         }

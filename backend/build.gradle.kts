@@ -15,6 +15,8 @@ val ktorVersion = "2.3.8"
 val logbackVersion = "1.4.14"
 
 dependencies {
+
+    implementation("io.github.cdimascio:dotenv-kotlin:6.4.1")
     // Ktor Core & Netty Engine
     implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-netty-jvm:$ktorVersion")
