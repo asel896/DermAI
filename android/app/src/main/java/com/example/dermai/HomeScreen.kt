@@ -22,11 +22,27 @@ fun HomeScreen(viewModel: MainViewModel) {
     var showCamera by remember { mutableStateOf(false) }
     val analysisState by viewModel.analysisState.collectAsState()
 
-
     if (showCamera) {
         CameraScreen(
             onTextRecognized = { recognizedText ->
-                textInput = recognizedText
+
+                val ingredientsOnly = when {
+                    recognizedText.contains("Ingredients:", ignoreCase = true) -> {
+                        recognizedText.substring(recognizedText.indexOf("Ingredients:", ignoreCase = true) + 12)
+                    }
+                    recognizedText.contains("İçindekiler:", ignoreCase = true) -> {
+                        recognizedText.substring(recognizedText.indexOf("İçindekiler:", ignoreCase = true) + 12)
+                    }
+                    else -> recognizedText
+                }
+
+
+                val cleanText = ingredientsOnly
+                    .replace("\n", ", ")
+                    .replace(Regex("\\s+"), " ")
+                    .trim()
+
+                textInput = cleanText
                 showCamera = false
             },
             onClose = {
@@ -51,7 +67,6 @@ fun HomeScreen(viewModel: MainViewModel) {
                     modifier = Modifier.padding(vertical = 12.dp)
                 )
 
-
                 Box(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = textInput,
@@ -63,7 +78,6 @@ fun HomeScreen(viewModel: MainViewModel) {
                             .height(130.dp),
                         maxLines = 5
                     )
-
 
                     IconButton(
                         onClick = { showCamera = true },

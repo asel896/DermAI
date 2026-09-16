@@ -2,6 +2,7 @@ package com.example.dermai
 
 import android.net.Uri
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
@@ -17,6 +18,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
@@ -33,7 +35,6 @@ fun CameraScreen(
     val imageCapture = remember { ImageCapture.Builder().build() }
     var isProcessing by remember { mutableStateOf(false) }
 
-
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
@@ -44,10 +45,15 @@ fun CameraScreen(
                 uri = it,
                 onTextFound = { text ->
                     isProcessing = false
-                    onTextRecognized(text)
+                    if (text.isNotBlank()) {
+                        onTextRecognized(text)
+                    } else {
+                        Toast.makeText(context, "Görselde okunabilir metin bulunamadı.", Toast.LENGTH_SHORT).show()
+                    }
                 },
-                onError = {
+                onError = { e ->
                     isProcessing = false
+                    Toast.makeText(context, "Metin okuma hatası: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                 }
             )
         }
@@ -89,7 +95,6 @@ fun CameraScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // kapat butonu
         IconButton(
             onClick = onClose,
             modifier = Modifier
@@ -100,10 +105,9 @@ fun CameraScreen(
             Icon(
                 imageVector = Icons.Default.Close,
                 contentDescription = "Kapat",
-                tint = MaterialTheme.colorScheme.surface
+                tint = Color.White
             )
         }
-
 
         Row(
             modifier = Modifier
@@ -113,9 +117,9 @@ fun CameraScreen(
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // galeri
             OutlinedButton(
-                onClick = { galleryLauncher.launch("image/*") }
+                onClick = { galleryLauncher.launch("image/*") },
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White)
             ) {
                 Icon(
                     imageVector = Icons.Default.PhotoLibrary,
@@ -125,7 +129,6 @@ fun CameraScreen(
                 Text("Galeri")
             }
 
-            // anlik fotograf cek
             Button(
                 onClick = {
                     if (!isProcessing) {
@@ -135,10 +138,15 @@ fun CameraScreen(
                             context = context,
                             onTextFound = { text ->
                                 isProcessing = false
-                                onTextRecognized(text)
+                                if (text.isNotBlank()) {
+                                    onTextRecognized(text)
+                                } else {
+                                    Toast.makeText(context, "Metin algılanamadı, tekrar deneyin.", Toast.LENGTH_SHORT).show()
+                                }
                             },
-                            onError = {
+                            onError = { e ->
                                 isProcessing = false
+                                Toast.makeText(context, "Hata: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                             }
                         )
                     }

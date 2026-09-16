@@ -1,5 +1,8 @@
 package com.dermai
 
+import io.ktor.server.plugins.cors.routing.CORS
+import io.ktor.http.HttpHeaders
+import io.ktor.http.HttpMethod
 import com.auth0.jwt.JWT
 import com.auth0.jwt.algorithms.Algorithm
 import io.ktor.http.*
@@ -38,6 +41,8 @@ fun main() {
             allowHeader(HttpHeaders.ContentType)
             allowHeader(HttpHeaders.Authorization)
             allowMethod(HttpMethod.Options)
+            allowMethod(HttpMethod.Post)
+            allowMethod(HttpMethod.Get)
             allowMethod(HttpMethod.Put)
             allowMethod(HttpMethod.Patch)
             allowMethod(HttpMethod.Delete)
